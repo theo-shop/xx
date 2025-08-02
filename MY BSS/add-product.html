@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+  <meta charset="UTF-8" />
+  <title>Theo Shop - Ongeramo Igicuruzwa</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      padding: 100px;
+      font-family: 'Segoe UI', sans-serif;
+      background: black;
+    }
+    .form-container {
+      background: white;
+      max-width: 600;
+      margin: 40px auto;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav a {
+      text-decoration: none;
+      color: #0d6efd;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+ <nav>
+    <a href="add-product.html">Ongeramo</a> |
+    <a href="stock.html">Stock</a> |
+    <a href="gucuruza.html">Gucuruza</a> |
+    <a href="sales-report.html">Raporo</a>
+  </nav>
+
+
+  <div class="form-container">
+    <h2>🛒 Add purchase in stock</h2>
+    <form id="addProductForm">
+      <div class="mb-3">
+        <label for="productName" class="form-label">Izina ry'Igicuruzwa</label>
+        <input type="text" id="productName" class="form-control" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="category" class="form-label">Icyiciro</label>
+        <select id="category" class="form-select" required>
+          <option value="" disabled selected>Hitamo icyiciro</option>
+          <option value="Drinks">Ibinyobwa</option>
+          <option value="Other">Ibindi</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label for="cartons" class="form-label">Amakarito (Cartons)</label>
+        <input type="number" id="cartons" class="form-control" min="1" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="unitsPerCarton" class="form-label">Units kuri Karito</label>
+        <input type="number" id="unitsPerCarton" class="form-control" min="1" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="pricePerCarton" class="form-label">Igiciro cyo Kugura/Karito (RWF)</label>
+        <input type="number" id="pricePerCarton" class="form-control" min="0" required />
+      </div>
+
+      <div class="mb-3">
+        <label for="sellingPrice" class="form-label">Igiciro cyo Kugurisha / Unit (RWF)</label>
+        <input type="number" id="sellingPrice" class="form-control" min="0" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">💾 Bika Igicuruzwa</button>
+    </form>
+  </div>
+
+<script>
+  const form = document.getElementById('addProductForm');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('productName').value.trim();
+    const category = document.getElementById('category').value;
+    const cartons = parseInt(document.getElementById('cartons').value);
+    const unitsPerCarton = parseInt(document.getElementById('unitsPerCarton').value);
+    const pricePerCarton = parseFloat(document.getElementById('pricePerCarton').value);
+    const sellingPrice = parseFloat(document.getElementById('sellingPrice').value);
+
+    const totalUnits = cartons * unitsPerCarton;
+    const costPerUnit = pricePerCarton / unitsPerCarton;
+    const profitPerUnit = sellingPrice - costPerUnit;
+
+    let products = JSON.parse(localStorage.getItem('products') || '[]');
+
+    const existingIndex = products.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existingIndex !== -1) {
+      const existing = products[existingIndex];
+      existing.cartons += cartons;
+      existing.totalUnits += totalUnits;
+      existing.pricePerCarton = pricePerCarton;
+      existing.costPerUnit = costPerUnit;
+      existing.sellingPrice = sellingPrice;
+      existing.profitPerUnit = profitPerUnit;
+      existing.unitsPerCarton = unitsPerCarton;
+      existing.category = category;
+      products[existingIndex] = existing;
+    } else {
+      const newProduct = {
+        name,
+        category,
+        cartons,
+        unitsPerCarton,
+        totalUnits,
+        pricePerCarton,
+        costPerUnit,
+        sellingPrice,
+        profitPerUnit
+      };
+      products.push(newProduct);
+    }
+
+    localStorage.setItem('products', JSON.stringify(products));
+    alert('Igicuruzwa cyongewe muri stock neza!');
+    form.reset();
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+  <meta charset="UTF-8" />
+  <title>Theo Shop - Stock & Gucuruza</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      padding: 20px;
+      font-family: 'Segoe UI', sans-serif;
+      background: forestgreen;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav a {
+      text-decoration: none;
+      color: #0d6efd;
+      font-weight: 600;
+    }
+    #searchInput {
+      margin-bottom: 15px;
+      max-width: 300px;
+    }
+    table {
+      background: white;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    th {
+      background: #343a40;
+      color: white;
+    }
+    input[type=number] {
+      width: 80px;
+    }
+  </style>
+</head>
+<body>
+
+ <nav>
+    <a href="add-product.html">Ongeramo</a> |
+    <a href="stock.html">Stock</a> |
+    <a href="gucuruza.html">Gucuruza</a> |
+    <a href="sales-report.html">Raporo</a>
+  </nav>
+
+
+  <h2>Stock y'Ibicuruzwa & Gucuruza</h2>
+
+  <input
+    type="search"
+    id="searchInput"
+    class="form-control"
+    placeholder="Shakisha izina ry'igicuruzwa..."
+  />
+
+  <table id="stockTable">
+    <thead>
+      <tr>
+        <th>Izina</th>
+        <th>Category</th>
+        <th>Amakarito</th>
+        <th>Units/Karito</th>
+        <th>Total Units</th>
+        <th>Igiciro Kugura/Karito (RWF)</th>
+        <th>Igiciro Kugurisha/Unit (RWF)</th>
+        <th>Gabanya Units</th>
+        <th>Igikorwa</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Edit Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form id="editForm" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Hindura Igicuruzwa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Funga"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editIndex" />
+          <div class="mb-3">
+            <label for="editName" class="form-label">Izina</label>
+            <input type="text" id="editName" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label for="editCategory" class="form-label">Category</label>
+            <input type="text" id="editCategory" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label for="editCartons" class="form-label">Amakarito</label>
+            <input type="number" id="editCartons" class="form-control" min="0" required />
+          </div>
+          <div class="mb-3">
+            <label for="editUnitsPerCarton" class="form-label">Units/Karito</label>
+            <input type="number" id="editUnitsPerCarton" class="form-control" min="1" required />
+          </div>
+          <div class="mb-3">
+            <label for="editPricePerCarton" class="form-label">Igiciro Kugura/Karito (RWF)</label>
+            <input type="number" id="editPricePerCarton" class="form-control" min="0" step="0.01" required />
+          </div>
+          <div class="mb-3">
+            <label for="editSellingPrice" class="form-label">Igiciro Kugurisha/Unit (RWF)</label>
+            <input type="number" id="editSellingPrice" class="form-control" min="0" step="0.01" required />
+          </div>
+          <div class="mb-3">
+            <label for="editCostPerUnit" class="form-label">Cost/Unit (RWF)</label>
+            <input type="number" id="editCostPerUnit" class="form-control" min="0" step="0.01" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Funga</button>
+          <button type="submit" class="btn btn-primary">Bika Impinduka</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const stockTableBody = document.querySelector('#stockTable tbody');
+  const searchInput = document.getElementById('searchInput');
+
+  // Edit modal elements
+  const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+  const editForm = document.getElementById('editForm');
+  const editIndexInput = document.getElementById('editIndex');
+  const editNameInput = document.getElementById('editName');
+  const editCategoryInput = document.getElementById('editCategory');
+  const editCartonsInput = document.getElementById('editCartons');
+  const editUnitsPerCartonInput = document.getElementById('editUnitsPerCarton');
+  const editPricePerCartonInput = document.getElementById('editPricePerCarton');
+  const editSellingPriceInput = document.getElementById('editSellingPrice');
+  const editCostPerUnitInput = document.getElementById('editCostPerUnit');
+
+  // Load products from localStorage
+  function loadStock(filter = '') {
+    let products = JSON.parse(localStorage.getItem('products') || '[]');
+    if(filter) {
+      filter = filter.toLowerCase();
+      products = products.filter(p => p.name.toLowerCase().includes(filter));
+    }
+
+    stockTableBody.innerHTML = '';
+
+    products.forEach((product, idx) => {
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td>${product.name}</td>
+        <td>${product.category}</td>
+        <td>${product.cartons}</td>
+        <td>${product.unitsPerCarton}</td>
+        <td>${product.totalUnits}</td>
+        <td>${product.pricePerCarton.toLocaleString()}</td>
+        <td>${product.sellingPrice.toLocaleString()}</td>
+        <td><input type="number" min="1" max="${product.totalUnits}" value="1" id="qty-${idx}" /></td>
+        <td>
+          <button class="btn btn-success btn-sm me-1" data-index="${idx}" data-action="sell">Curuzwa</button>
+          <button class="btn btn-warning btn-sm me-1" data-index="${idx}" data-action="edit">Hindura</button>
+          <button class="btn btn-danger btn-sm" data-index="${idx}" data-action="delete">Siba</button>
+        </td>
+      `;
+
+      stockTableBody.appendChild(tr);
+    });
+  }
+
+  // Handle button clicks (sell, edit, delete)
+  stockTableBody.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+
+    const idx = parseInt(e.target.getAttribute('data-index'));
+    const action = e.target.getAttribute('data-action');
+
+    let products = JSON.parse(localStorage.getItem('products') || '[]');
+
+    if(action === 'sell') {
+      const qtyInput = document.getElementById('qty-' + idx);
+      const qtyToSell = parseInt(qtyInput.value);
+
+      if (isNaN(qtyToSell) || qtyToSell < 1) {
+        alert('Injiza umubare w\'ibicuruzwa ushaka kugurisha!');
+        return;
+      }
+
+      const product = products[idx];
+
+      if (qtyToSell > product.totalUnits) {
+        alert('Ntabwo ushobora kugurisha ibirenze stock!');
+        return;
+      }
+
+      // Update stock
+      product.totalUnits -= qtyToSell;
+      // Update cartons and unitsPerCarton proportionally
+      const unitsPerCarton = product.unitsPerCarton;
+      product.cartons = Math.floor(product.totalUnits / unitsPerCarton);
+      // partial units ignored
+
+      products[idx] = product;
+      localStorage.setItem('products', JSON.stringify(products));
+
+      // Save sale info
+      let sales = JSON.parse(localStorage.getItem('sales') || '[]');
+      sales.push({
+        name: product.name,
+        cartons: 0,
+        unitsSold: qtyToSell,
+        unitsPerCarton: product.unitsPerCarton,
+        pricePerUnit: product.sellingPrice,
+        costPerUnit: product.costPerUnit,
+        date: new Date().toISOString()
+      });
+      localStorage.setItem('sales', JSON.stringify(sales));
+
+      alert(`Wacuruje ${qtyToSell} units z'${product.name}'`);
+
+      loadStock(searchInput.value);
+    }
+
+    else if(action === 'edit') {
+      const product = products[idx];
+      editIndexInput.value = idx;
+      editNameInput.value = product.name;
+      editCategoryInput.value = product.category;
+      editCartonsInput.value = product.cartons;
+      editUnitsPerCartonInput.value = product.unitsPerCarton;
+      editPricePerCartonInput.value = product.pricePerCarton;
+      editSellingPriceInput.value = product.sellingPrice;
+      editCostPerUnitInput.value = product.costPerUnit;
+
+      editModal.show();
+    }
+
+    else if(action === 'delete') {
+      if(confirm('Uri bubureho igicuruzwa?')) {
+        products.splice(idx, 1);
+        localStorage.setItem('products', JSON.stringify(products));
+        loadStock(searchInput.value);
+      }
+    }
+  });
+
+  // Handle Edit form submit
+  editForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    let products = JSON.parse(localStorage.getItem('products') || '[]');
+    const idx = parseInt(editIndexInput.value);
+
+    const updatedProduct = {
+      name: editNameInput.value.trim(),
+      category: editCategoryInput.value.trim(),
+      cartons: parseInt(editCartonsInput.value),
+      unitsPerCarton: parseInt(editUnitsPerCartonInput.value),
+      pricePerCarton: parseFloat(editPricePerCartonInput.value),
+      sellingPrice: parseFloat(editSellingPriceInput.value),
+      costPerUnit: parseFloat(editCostPerUnitInput.value)
+    };
+
+    updatedProduct.totalUnits = updatedProduct.cartons * updatedProduct.unitsPerCarton;
+
+    products[idx] = updatedProduct;
+    localStorage.setItem('products', JSON.stringify(products));
+
+    editModal.hide();
+    loadStock(searchInput.value);
+  });
+
+  // Search input handler
+  searchInput.addEventListener('input', () => {
+    loadStock(searchInput.value);
+  });
+
+  // Initial load
+  loadStock();
+
+</script>
+
+</body>
+</html>

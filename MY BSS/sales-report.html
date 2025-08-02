@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+  <meta charset="UTF-8" />
+  <title>Theo Shop - Raporo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: pink;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav a {
+      margin: 0 10px;
+      color: #0d6efd;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .summary-box {
+      margin-top: 20px;
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .btn-sm {
+      padding: 2px 6px;
+    }
+  </style> 
+</head>
+<body>
+
+  <nav>
+    <a href="add-product.html">Ongeramo</a> |
+    <a href="stock.html">Stock</a> |
+    <a href="gucuruza.html">Gucuruza</a> |
+    <a href="sales-report.html">Raporo</a>
+  </nav>
+
+  <h2>Raporo y’Ubucuruzi</h2>
+
+  <div class="mb-3 row">
+    <label class="col-sm-2 col-form-label">Ukwezi:</label>
+    <div class="col-sm-3">
+      <select id="monthFilter" class="form-control">
+        <option value="">-- Ukwezi kose --</option>
+        <option value="01">Mutarama</option>
+        <option value="02">Gashyantare</option>
+        <option value="03">Werurwe</option>
+        <option value="04">Mata</option>
+        <option value="05">Gicurasi</option>
+        <option value="06">Kamena</option>
+        <option value="07">Nyakanga</option>
+        <option value="08">Kanama</option>
+        <option value="09">Nzeri</option>
+        <option value="10">Ukwakira</option>
+        <option value="11">Ugushyingo</option>
+        <option value="12">Ukuboza</option>
+      </select>
+    </div>
+    <div class="col-sm-3">
+      <input type="number" id="yearFilter" class="form-control" placeholder="Umwaka nko 2025">
+    </div>
+    <div class="col-sm-2">
+      <button class="btn btn-primary" onclick="loadSales()">Shungura</button>
+    </div>
+    <div class="col-sm-2 text-end">
+      <button class="btn btn-success" onclick="exportToExcel()">Export</button>
+    </div>
+  </div>
+
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Izina</th>
+        <th>Units</th>
+        <th>Igiciro</th>
+        <th>Yatanzwe</th>
+        <th>Yinjiye</th>
+        <th>Inyungu</th>
+        <th>Itariki</th>
+        <th>Ibikorwa</th>
+      </tr>
+    </thead>
+    <tbody id="salesTableBody"></tbody>
+  </table>
+
+  <div class="summary-box">
+    <p><strong>Total Units:</strong> <span id="totalUnits">0</span></p>
+    <p><strong>Total Revenue:</strong> RWF <span id="totalRevenue">0</span></p>
+    <p><strong>Total Profit:</strong> RWF <span id="totalProfit">0</span></p>
+  </div>
+
+  <div class="mt-4">
+    <h5>Inyungu kuri Buri Gicuruzwa</h5>
+    <canvas id="profitChart" height="100"></canvas>
+  </div>
+
+  <script>
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function loadSales() {
+      const sales = JSON.parse(localStorage.getItem('sales') || '[]');
+      const month = document.getElementById('monthFilter').value;
+      const year = document.getElementById('yearFilter').value;
+      const tbody = document.getElementById('salesTableBody');
+      tbody.innerHTML = '';
+
+      let totalUnits = 0;
+      let totalRevenue = 0;
+      let totalProfit = 0;
+      let profitData = {};
+
+      sales.forEach((sale, i) => {
+        const saleDate = formatDate(sale.date);
+        const matches = (!month && !year) || saleDate.startsWith(`${year}-${month}`);
+        if (matches) {
+          const revenue = sale.pricePerUnit * sale.unitsSold;
+          const cost = sale.costPerUnit * sale.unitsSold;
+          const profit = revenue - cost;
+
+          totalUnits += sale.unitsSold;
+          totalRevenue += revenue;
+          totalProfit += profit;
+
+          profitData[sale.name] = (profitData[sale.name] || 0) + profit;
+
+          tbody.innerHTML += `
+            <tr>
+              <td>${sale.name}</td>
+              <td>${sale.unitsSold}</td>
+              <td>${sale.pricePerUnit}</td>
+              <td>${cost}</td>
+              <td>${revenue}</td>
+              <td>${profit}</td>
+              <td>${saleDate}</td>
+              <td>
+                <button class="btn btn-warning btn-sm" onclick="editSale(${i})">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteSale(${i})">Delete</button>
+              </td>
+            </tr>`;
+        }
+      });
+
+      document.getElementById('totalUnits').textContent = totalUnits;
+      document.getElementById('totalRevenue').textContent = totalRevenue.toLocaleString();
+      document.getElementById('totalProfit').textContent = totalProfit.toLocaleString();
+
+      if (window.profitChartInstance) window.profitChartInstance.destroy();
+      const ctx = document.getElementById('profitChart').getContext('2d');
+      window.profitChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(profitData),
+          datasets: [{
+            label: 'Inyungu (RWF)',
+            data: Object.values(profitData),
+            backgroundColor: 'rgba(40,167,69,0.6)',
+            borderColor: 'rgba(40,167,69,1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function deleteSale(index) {
+      if (confirm('Wemeza ko ushaka gukuraho iyi nyemezabuguzi?')) {
+        let sales = JSON.parse(localStorage.getItem('sales') || '[]');
+        sales.splice(index, 1);
+        localStorage.setItem('sales', JSON.stringify(sales));
+        loadSales();
+      }
+    }
+
+    function editSale(index) {
+      let sales = JSON.parse(localStorage.getItem('sales') || '[]');
+      let sale = sales[index];
+      let newQty = prompt("Hindura Units zagurishijwe:", sale.unitsSold);
+      if (newQty !== null) {
+        newQty = parseInt(newQty);
+        if (!isNaN(newQty) && newQty > 0) {
+          sale.unitsSold = newQty;
+          sales[index] = sale;
+          localStorage.setItem('sales', JSON.stringify(sales));
+          loadSales();
+        } else {
+          alert("Injiza umubare wemewe!");
+        }
+      }
+    }
+
+    function exportToExcel() {
+      const sales = JSON.parse(localStorage.getItem('sales') || '[]');
+      const month = document.getElementById('monthFilter').value;
+      const year = document.getElementById('yearFilter').value;
+      const csv = ["Izina,Units,Igiciro,Yatanzwe,Yinjiye,Inyungu,Itariki"];
+
+      sales.forEach(s => {
+        const saleDate = formatDate(s.date);
+        if ((!month && !year) || saleDate.startsWith(`${year}-${month}`)) {
+          const revenue = s.pricePerUnit * s.unitsSold;
+          const cost = s.costPerUnit * s.unitsSold;
+          const profit = revenue - cost;
+          csv.push(`${s.name},${s.unitsSold},${s.pricePerUnit},${cost},${revenue},${profit},${saleDate}`);
+        }
+      });
+
+      const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "sales-report.csv";
+      link.click();
+    }
+
+    loadSales();
+  </script>
+
+</body>
+</html>
